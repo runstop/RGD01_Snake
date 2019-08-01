@@ -2,7 +2,7 @@ extends Node2D
 
 const BLOCK_SIZE = 20
 const NUMBER_OF_BLOCKS = 40
-const START_TAIL_LENGTH = 6
+const START_TAIL_LENGTH = 3
 const UPDATE_INTERVAL = 0.08
 
 var snake_speed = Vector2(0,0)
@@ -13,11 +13,11 @@ var viewsize = Rect2()
 var last_updated =0.0
 var block = null
 var snake_color = null
+var apple_pos = null
 
 func _init():
 	snake_color = Color(1, 1, 1)
 
-	
 func _ready():
 	print("Initializing game...")
 	set_physics_process(true)
@@ -26,7 +26,10 @@ func _ready():
 	
 	block = Vector2(viewsize.x/NUMBER_OF_BLOCKS,viewsize.y/NUMBER_OF_BLOCKS)
 	head = Vector2(NUMBER_OF_BLOCKS/2.0, NUMBER_OF_BLOCKS/ 2.0)
-	print("head: ", head)
+	
+	# Set initial position of apple at random location
+	randomize()
+	apple_pos = spawnNewApple()
 	
 func _draw():
 	# draw head
@@ -39,6 +42,11 @@ func _draw():
 		var pos2 = Vector2(tails[tail_pos].x * block.x, tails[tail_pos].y * block.y)
 		var tail_block = Rect2(pos2,block)
 		draw_rect(tail_block, snake_color)		
+	
+	# draw apple
+	var view_pos = Vector2(apple_pos.x * block.x, apple_pos.y * block.y)
+	var apple_block = Rect2(view_pos,block)
+	draw_rect(apple_block, Color(1,0,0))
 	
 func _input(event):
 	if event.is_action("dir_up"):
@@ -67,6 +75,11 @@ func updateHeadPosition(delta):
 	elif head.y < 0:
 		head.y = NUMBER_OF_BLOCKS - 1	
 		
+func spawnNewApple():
+	var x_pos = randi() % NUMBER_OF_BLOCKS
+	var y_pos = randi() % NUMBER_OF_BLOCKS
+	return Vector2(x_pos,y_pos)
+
 func _physics_process(delta):
 	if last_updated + delta > UPDATE_INTERVAL:
 		last_updated = 0
@@ -78,6 +91,12 @@ func _physics_process(delta):
 			tails.remove(0)
 	else:
 		last_updated += delta
+
+	# Check if snake eats apple
+	if head == apple_pos:
+		apple_pos = spawnNewApple()
+		tail_length += 1	
+	
 	update()
 #	
 
