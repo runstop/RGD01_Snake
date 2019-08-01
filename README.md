@@ -1,3 +1,5 @@
 # Snake #
 
-Rapdi Game Development in Godot
+Rapid Game Development in Godot
+
+Thursday, August 1, 2019
