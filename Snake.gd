@@ -1,6 +1,6 @@
 extends Node2D
 
-const NUMBER_OF_BLOCKS:int = 10
+const NUMBER_OF_BLOCKS:int = 15
 const START_TAIL_LENGTH:int = 3
 const UPDATE_INTERVAL:float = 0.15
 const MAX_NEW_APPLE_ATTEMPTS = 1000  # reasonable attempt limit before stopping search
@@ -20,6 +20,30 @@ var last_speed = Vector2.ZERO
 func _init():
 	snake_color = Color(1, 1, 1)
 
+func reset_game():
+	
+	tails.clear()
+
+	# calculate the block size based on viewsize 
+	var width:int = viewsize.x / NUMBER_OF_BLOCKS
+	var height:int = viewsize.y / NUMBER_OF_BLOCKS	
+	block = Vector2(width, height)
+	
+	# position snake from center block of screen 
+	var x_pos = round(int((NUMBER_OF_BLOCKS-1)/ 2.0))
+	var y_pos = round(int((NUMBER_OF_BLOCKS-1) / 2.0))
+	
+	head = Vector2(x_pos, y_pos)
+
+	tail_length = START_TAIL_LENGTH
+	# Build out snake tail, left of the starting block
+	var tail = head + Vector2.LEFT
+	for _i in range(tail_length):
+		tails.push_back(tail)
+		tail += Vector2.LEFT
+		
+	snake_speed = Vector2.ZERO
+	
 
 func _ready():
 	print("Initializing game...")
@@ -27,17 +51,8 @@ func _ready():
 	set_process_input(true)
 	viewsize = get_viewport_rect().size
 	
-	block = Vector2(int(round(viewsize.x/NUMBER_OF_BLOCKS)),int(round(viewsize.y/NUMBER_OF_BLOCKS)))
-	head = Vector2( int(round(NUMBER_OF_BLOCKS/2.0)), int(round(NUMBER_OF_BLOCKS/ 2.0)))
+	reset_game()
 	
-	var tail = head
-	tail.x = tail.x - 1
-	var lent = tails.size()
-	while lent < tail_length:
-		tails.push_back(tail)
-		tail.x -= 1
-		lent += 1
-		
 	# Set initial position of apple at random location
 	randomize()
 	apple_pos = spawn_new_apple()
@@ -84,11 +99,11 @@ func update_head_position(head_pos: Vector2):
 	var new_pos = Vector2(head_pos.x + snake_speed.x, head_pos.y + snake_speed.y)
 	
 	# wrap snake head around edges of game window
-	if new_pos.x > NUMBER_OF_BLOCKS-1:
+	if new_pos.x > NUMBER_OF_BLOCKS - 1:
 		new_pos.x = 0
 	elif new_pos.x < 0:
-		new_pos.x = NUMBER_OF_BLOCKS-1
-	elif new_pos.y > NUMBER_OF_BLOCKS-1:
+		new_pos.x = NUMBER_OF_BLOCKS - 1
+	elif new_pos.y > NUMBER_OF_BLOCKS - 1:
 		new_pos.y = 0
 	elif new_pos.y < 0:
 		new_pos.y = NUMBER_OF_BLOCKS - 1
@@ -98,7 +113,7 @@ func update_head_position(head_pos: Vector2):
 func get_random_position():
 	var x = randi() % NUMBER_OF_BLOCKS
 	var y = randi() % NUMBER_OF_BLOCKS
-	return Vector2(x,y)
+	return Vector2(x, y)
 
 
 func spawn_new_apple():
@@ -124,13 +139,13 @@ func _physics_process(delta):
 		if tails.find(head,0) >= 0:
 			#check if snake collides with tail (a game ending event)
 			print("found head in tail")
-		#else:
-			#while tails.size() >= tail_length:
-		if tails.size() > tail_length:
-			tails.pop_back()
-		tails.push_front(head)
-	
-		head = update_head_position(head) #move snake head in direction of speed
+			reset_game()
+		else:
+			if tails.size() > tail_length:
+				tails.pop_back()
+			tails.push_front(head)
+		
+			head = update_head_position(head) #move snake head in direction of speed
 		last_speed = snake_speed # save last speed direction
 
 		# Check if snake eats apple
