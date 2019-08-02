@@ -13,12 +13,12 @@ var tails: Array = []
 var tail_length:int = START_TAIL_LENGTH
 var viewsize = Rect2()
 var block = null
-var snake_color = null
-var apple_pos = null
+var snake_color = Color.white
+var apple_pos = Vector2.ZERO
 
 
 func _init():
-	snake_color = Color(1, 1, 1)
+	snake_color = Color.white
 
 func _ready():
 	# Set initial position of apple at random location
@@ -46,9 +46,10 @@ func _draw():
 		draw_rect(tail_block, snake_color)
 	
 	# draw apple
-	var view_pos = Vector2(apple_pos.x * block.x, apple_pos.y * block.y)
-	var apple_block = Rect2(view_pos,block)
-	draw_rect(apple_block, Color(1,0,0))
+	if apple_pos != Vector2.ZERO:
+		var view_pos = Vector2(apple_pos.x * block.x, apple_pos.y * block.y)
+		var apple_block = Rect2(view_pos,block)
+		draw_rect(apple_block, Color.red)
 
 
 func update_snake_position():
