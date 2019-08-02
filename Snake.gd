@@ -3,62 +3,37 @@ extends Node2D
 const NUMBER_OF_BLOCKS:int = 15
 const START_TAIL_LENGTH:int = 3
 const UPDATE_INTERVAL:float = 0.15
-const MAX_NEW_APPLE_ATTEMPTS = 1000  # reasonable attempt limit before stopping search
+const MAX_NEW_APPLE_ATTEMPTS = 1000  #limit retries for random apple position
 
-var snake_speed = Vector2(0,0)
+var snake_speed = Vector2.ZERO
+var last_speed = Vector2.ZERO
+var last_updated = 0.0
 var head = null
-var tail_length:int = START_TAIL_LENGTH
 var tails: Array = []
+var tail_length:int = START_TAIL_LENGTH
 var viewsize = Rect2()
-var last_updated =0.0
 var block = null
 var snake_color = null
 var apple_pos = null
-var last_speed = Vector2.ZERO
 
 
 func _init():
 	snake_color = Color(1, 1, 1)
 
-func reset_game():
-	
-	tails.clear()
-
-	# calculate the block size based on viewsize 
-	var width:int = viewsize.x / NUMBER_OF_BLOCKS
-	var height:int = viewsize.y / NUMBER_OF_BLOCKS	
-	block = Vector2(width, height)
-	
-	# position snake from center block of screen 
-	var x_pos = round(int((NUMBER_OF_BLOCKS-1)/ 2.0))
-	var y_pos = round(int((NUMBER_OF_BLOCKS-1) / 2.0))
-	
-	head = Vector2(x_pos, y_pos)
-
-	tail_length = START_TAIL_LENGTH
-	# Build out snake tail, left of the starting block
-	var tail = head + Vector2.LEFT
-	for _i in range(tail_length):
-		tails.push_back(tail)
-		tail += Vector2.LEFT
-		
-	snake_speed = Vector2.ZERO
-	
-
 func _ready():
-	print("Initializing game...")
-	set_physics_process(true)
-	set_process_input(true)
-	viewsize = get_viewport_rect().size
-	
-	reset_game()
-	
 	# Set initial position of apple at random location
 	randomize()
-	apple_pos = spawn_new_apple()
+	set_physics_process(true)
+	set_process_input(true)
+
+	viewsize = get_viewport_rect().size
+	new_snake()
+	
+	apple_pos = new_apple()
 
 
 func _draw():
+	# everything drawn here is in pixels, not blocks :-)
 	# draw head
 	var pos = Vector2(head.x * block.x, head.y * block.y)
 	var head_pos = Rect2(pos, block)
@@ -74,6 +49,38 @@ func _draw():
 	var view_pos = Vector2(apple_pos.x * block.x, apple_pos.y * block.y)
 	var apple_block = Rect2(view_pos,block)
 	draw_rect(apple_block, Color(1,0,0))
+
+
+func update_snake_position():
+	last_updated = 0.0
+	if tails.find(head,0) >= 0:
+		#check if snake collides with tail (a game ending event)
+		print("found head in tail")
+		new_snake()
+	else:
+		if tails.size() > tail_length:
+			tails.pop_back()
+		tails.push_front(head)
+	
+		head = update_head_position(head) #move snake head in direction of speed
+	last_speed = snake_speed # save last speed direction
+
+
+func _physics_process(delta):
+	if last_updated + delta > UPDATE_INTERVAL:
+		if snake_speed == Vector2.ZERO:
+			return
+
+		update_snake_position()
+
+		# Check if snake eats apple
+		if  head == apple_pos:
+			apple_pos = new_apple()
+			tail_length += 1
+		
+		update()  # draw new snake and apple position
+	else:
+		last_updated += delta
 
 
 func _input(event):
@@ -93,6 +100,30 @@ func _input(event):
 		snake_speed = Vector2.LEFT
 	elif event.is_action("dir_right") && last_speed != Vector2.LEFT:
 		snake_speed = Vector2.RIGHT
+
+
+func new_snake():
+	tails.clear()
+
+	# calculate the block size based on viewsize 
+	var width:int = viewsize.x / NUMBER_OF_BLOCKS
+	var height:int = viewsize.y / NUMBER_OF_BLOCKS	
+	block = Vector2(width, height)
+	
+	# position snake from center block of screen 
+	var x_pos = round(int((NUMBER_OF_BLOCKS-1)/ 2.0))
+	var y_pos = round(int((NUMBER_OF_BLOCKS-1) / 2.0))
+	
+	head = Vector2(x_pos, y_pos)
+	tail_length = START_TAIL_LENGTH
+
+	# Build out snake tail, left of the starting block
+	var tail = head + Vector2.LEFT
+	for _i in range(tail_length):
+		tails.push_back(tail)
+		tail += Vector2.LEFT
+		
+	snake_speed = Vector2.ZERO  #snake has zero speed
 
 
 func update_head_position(head_pos: Vector2):
@@ -116,45 +147,16 @@ func get_random_position():
 	return Vector2(x, y)
 
 
-func spawn_new_apple():
+func new_apple():
 	var new_apple_pos = Vector2.ZERO
 	var attempts = 0
 	
 	while new_apple_pos == Vector2.ZERO && attempts < MAX_NEW_APPLE_ATTEMPTS:
 		var pos = get_random_position()
-		# apple should spawn outside area of the snake
+		# apple should spawn outside area of the snake's body
 		if head != pos && !tails.has(pos):
 			new_apple_pos = pos
 		else:
 			attempts += 1
 	return new_apple_pos
-
-
-func _physics_process(delta):
-	if last_updated + delta > UPDATE_INTERVAL:
-		last_updated = 0.0
-		if snake_speed == Vector2.ZERO:
-			return
-
-		if tails.find(head,0) >= 0:
-			#check if snake collides with tail (a game ending event)
-			print("found head in tail")
-			reset_game()
-		else:
-			if tails.size() > tail_length:
-				tails.pop_back()
-			tails.push_front(head)
-		
-			head = update_head_position(head) #move snake head in direction of speed
-		last_speed = snake_speed # save last speed direction
-
-		# Check if snake eats apple
-		if  head == apple_pos:
-			apple_pos = spawn_new_apple()
-			tail_length += 1
-		
-		update()
-	else:
-		last_updated += delta
-		
 
